@@ -41,12 +41,34 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.objpoints = []
         self.imgpoints = []
 
+        self.gray_imgs = []
+        self.color_imgs = []
+
+        # Camera parameter
+        self.RMS = None
+        self.camera_matrix = []
+        self.distortion_coefficients = []
+
+        # pre-read imgs in memory as array
+        self.read_img()
+
+    def read_img(self):
+        for i in range(len(self.imgSortedList)):
+            print(imgpath + os.sep + self.imgSortedList[i])
+            img = cv2.imread(imgpath + os.sep + self.imgSortedList[i])
+            gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+            self.color_imgs.append(img)
+            self.gray_imgs.append(gray)
+
     def onBindingUI(self):
         self.bt_find_corners.clicked.connect(self.on_bt_find_corners_click)
         #self.bt_intrinsic.clicked.connect(self.on_bt_find_intrinsic_click)
         self.comboBox.addItems(imgSortedList)
         self.comboBox.activated[str].connect(self.comboBox_onChanged) 
         self.bt_cancel.clicked.connect(self.on_bt_cancel_click)
+
+        self.bt_intrinsic.clicked.connect(self.on_bt_intrinsic_click)
+        self.bt_distortion.clicked.connect(self.on_bt_distortion_click)
 
     def on_bt_find_corners_click(self):
         find_corner_img = self.find_imgs_corner()
@@ -65,6 +87,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_bt_cancel_click(self):
         sys.exit(app.exec_())
 
+    def on_bt_intrinsic_click(self):
+        if len(self.camera_matrix) == 0:
+            self.camera_calibration()
+        print ("Intrinsic matrix:\n", self.camera_matrix)
+
+    def on_bt_distortion_click(self):
+        #print(self.distortion_coefficients)
+        if len(self.distortion_coefficients) == 0 :
+            self.camera_calibration()
+        print ("Distortion matrix:\n", self.distortion_coefficients)
+
     def comboBox_onChanged(self,text):
         self.selected_img = text
 
@@ -79,6 +112,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #plt.subplot(2,int(leng/2),i)
         #plt.imshow(imgs)
 
+    def camera_calibration(self):
+        if len(self.objpoints) == 0 :
+            self.find_imgs_corner()
+        ret, mtx, dist, _, _ = cv2.calibrateCamera(self.objpoints, self.imgpoints, self.gray_imgs[0].shape[::-1],None,None)
+        self.RMS = ret
+        self.camera_matrix = mtx
+        self.distortion_coefficients = dist.ravel()
+
     def find_imgs_corner(self):
 
         find_corner_img = []
@@ -89,14 +130,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             objp = np.zeros((8*11,3), np.float32)
             objp[:,:2] = np.mgrid[0:11,0:8].T.reshape(-1,2)
 
-            print(imgpath + os.sep + self.imgSortedList[i])
-            img = cv2.imread(imgpath + os.sep + self.imgSortedList[i])
-            print(img.shape)
-            gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-            print(gray.shape)
+            img = self.color_imgs[i]
+            #print(img.shape)
+            gray = self.gray_imgs[i]
+            #print(gray.shape)
 
             ret, corners = cv2.findChessboardCorners(gray, (11,8),None)
-            print(ret)
+            #print(ret)
 
             if ret == True:
                 self.objpoints.append(objp)
