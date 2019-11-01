@@ -1,6 +1,6 @@
 # Hw1-1
 
-python -m PyQt5.uic.pyuic mainwindow.ui -o hw1_ui.py
 
+<img src="https://raw.githubusercontent.com/tony92151/ncku_cvdl/master/img/hw1-1.png" width="360"/>
 
-hw1-1.png
+# Hw1-2
