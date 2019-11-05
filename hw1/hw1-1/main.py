@@ -27,7 +27,7 @@ imgpath = path + os.sep + "CameraCalibration"
 imglist = os.listdir(imgpath)
 imglistd = [i[:-4] for i in imglist]
 imglistd = np.sort(np.array(imglistd).astype('int'))
-imgSortedList = ["All"]+[format(i)+".bmp" for i in imglistd]
+imgSortedList = [format(i)+".bmp" for i in imglistd]
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self, parent=None):
@@ -35,8 +35,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.onBindingUI()
 
-        self.imgSortedList = imgSortedList[1:]
-        self.selected_img = "All"
+        self.imgSortedList = imgSortedList
+        self.selected_img = self.imgSortedList[0]
+        print(self.selected_img)
 
         self.objpoints = []
         self.imgpoints = []
