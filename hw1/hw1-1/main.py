@@ -214,18 +214,39 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         img = self.color_imgs[0]
         _, corners = cv2.findChessboardCorners(self.gray_imgs[0], (11,8),None)
         #print(tuple(corners[0][0]))
-        p1 = tuple(corners[-1][0])
-        p2 = tuple(corners[-2][0])
-        p3 = tuple(corners[-12][0])
-        p4 = tuple(corners[-13][0])
-        print(self.rotation_matrix[0])
-        X1 = np.linalg.inv(self.rotation_matrix[0]) #@ inv(self.camera_matrix[0]) #@ np.append(corners[-1][0],[0]).T
+        ################################################################################################
+        p1 = corners[-1][0].reshape(len(corners[-1][0]),1)
+        p1 = np.concatenate((p1, np.array([[1],[1]])),axis = 0)
 
-        print(X1)
-        img = cv2.circle(img,p1, 30, (0, 255, 255), 3)
-        img = cv2.circle(img,p2, 30, (0, 255, 255), 3)
-        img = cv2.circle(img,p3, 30, (0, 255, 255), 3)
-        img = cv2.circle(img,p4, 30, (0, 255, 255), 3)
+        p2 = corners[-2][0].reshape(len(corners[-2][0]),1)
+        p2 = np.concatenate((p2, np.array([[1],[1]])),axis = 0)
+
+        p3 = corners[-12][0]
+        p3 = np.concatenate((p3, np.array([[1],[1]])),axis = 0)
+
+        p4 = corners[-13][0]
+        p4 = np.concatenate((p4, np.array([[1],[1]])),axis = 0)
+        ################################################################################################
+        rt = np.concatenate((self.camera_matrix@self.rotation_matrix[0], np.array([[0.,0.,0.,1.]])),axis = 0)
+
+        x1 = np.linalg.inv(rt) @ p1
+        x2 = np.linalg.inv(rt) @ p2
+        x3 = np.linalg.inv(rt) @ p3
+        x4 = np.linalg.inv(rt) @ p4
+        ################################################################################################
+
+
+        p1 = rt@x1
+        p1 = p1.reshape(1,len(p1))[0][:2]
+
+        print("P1\n",p1)
+
+        #X1 = np.linalg.inv(self.rotation_matrix[0]) #@ inv(self.camera_matrix[0]) #@ np.append(corners[-1][0],[0]).T
+        #print(X1)
+        img = cv2.circle(img,tuple(p1.astype('int')), 30, (0, 255, 255), 3)
+        img = cv2.circle(img,tuple(p2.astype('int')), 30, (0, 255, 255), 3)
+        img = cv2.circle(img,tuple(p3.astype('int')), 30, (0, 255, 255), 3)
+        img = cv2.circle(img,tuple(p4.astype('int')), 30, (0, 255, 255), 3)
         
         img = cv2.resize(img, (600, 600)) 
         t = threading.Thread(target = self.diaplay_imgs(img,0))
@@ -233,7 +254,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # point = []
         # self.pyramid_img
         # self.color_imgs
-
         
         
 
