@@ -191,7 +191,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             if ret == True:
                 self.objpoints.append(objp)
-                print(np.array(corners).shape)
+                #print(np.array(corners).shape)
                 corners2 = cv2.cornerSubPix(gray,corners,(11,8),(-1,-1),criteria)
                 self.imgpoints.append(corners2)
 
@@ -206,101 +206,133 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
 
     def on_bt_augmented_reality_click(self):
-        self.caculate_pyramid()
+        pyramid_imgs = self.caculate_pyramid()
+
+        print(len(pyramid_imgs))
+
+        for i in range(len(pyramid_imgs)):
+            # plt.subplot(4,4,i)
+            # plt.imshow(find_corner_img[i])
+            t = threading.Thread(target = self.diaplay_imgs(pyramid_imgs[i],i))
+            t.start()
 
     def caculate_pyramid(self):
+        pyramid_imgs = []
         if len(self.distortion_coefficients) == 0 :
             self.camera_calibration()
-        img = self.color_imgs[0]
-        _, corners = cv2.findChessboardCorners(self.gray_imgs[0], (11,8),None)
-        #print(tuple(corners[0][0]))
-        ################################################################################################
-        p1 = corners[-1][0].reshape(len(corners[-1][0]),1)
-        p1 = np.concatenate((p1, np.array([[1],[1]])),axis = 0)
 
-        p2 = corners[-2][0].reshape(len(corners[-2][0]),1)
-        p2 = np.concatenate((p2, np.array([[1],[1]])),axis = 0)
+        for i in range(10):
+            img = self.color_imgs[i]
+            _, corners = cv2.findChessboardCorners(self.gray_imgs[i], (11,8),None)
+            #print(tuple(corners[0][0]))
+            ################################################################################################
+            p1 = corners[-1][0].reshape(len(corners[-1][0]),1)
+            p1 = np.concatenate((p1, np.array([[1],[1]])),axis = 0)
 
-        p3 = corners[-12][0].reshape(len(corners[-12][0]),1)
-        p3 = np.concatenate((p3, np.array([[1],[1]])),axis = 0)
+            p2 = corners[-2][0].reshape(len(corners[-2][0]),1)
+            p2 = np.concatenate((p2, np.array([[1],[1]])),axis = 0)
 
-        p4 = corners[-13][0].reshape(len(corners[-13][0]),1)
-        p4 = np.concatenate((p4, np.array([[1],[1]])),axis = 0)
-        ################################################################################################
-        rt = np.concatenate((self.camera_matrix@self.rotation_matrix[0], np.array([[0.,0.,0.,1.]])),axis = 0)
+            p3 = corners[-12][0].reshape(len(corners[-12][0]),1)
+            p3 = np.concatenate((p3, np.array([[1],[1]])),axis = 0)
 
-        x1 = np.linalg.inv(rt) @ p1
-        x2 = np.linalg.inv(rt) @ p2
-        x3 = np.linalg.inv(rt) @ p3
-        x4 = np.linalg.inv(rt) @ p4
-        ################################################################################################
-        x5 = x1 + (x1-x4) 
-        x6 = x2 + (x2-x4) 
-        x7 = x3 + (x3-x4) 
+            p4 = corners[-13][0].reshape(len(corners[-13][0]),1)
+            p4 = np.concatenate((p4, np.array([[1],[1]])),axis = 0)
 
-        print(x3)
-        print(x2)
-        vec = np.cross((x3-x1).T[0][:3], (x2-x1).T[0][:3])
-        vec = vec /(vec**2).sum()**0.5
-        print(vec)
-        vec = np.concatenate((vec.reshape(len(vec),1), np.array([[1]])),axis = 0)
-        print(((x3-x1).T[0][:3]**2).sum()**0.5)
-        x8 = x1 - 0.1*vec*(0.5*pow(3,0.5))*((x3-x1).T[0][:3]**2).sum()**0.5
-        print(x8)
-        ################################################################################################
-        p1 = rt@x1
-        p1 = p1.reshape(1,len(p1))[0][:2]
-        
-        p2 = rt@x2
-        p2 = p2.reshape(1,len(p2))[0][:2]
+            p_h = corners[-11][0].reshape(len(corners[-11][0]),1)
+            p_h = np.concatenate((p_h, np.array([[1],[1]])),axis = 0)
 
-        p3 = rt@x3
-        p3 = p3.reshape(1,len(p3))[0][:2]
+            p_v = corners[-82][0].reshape(len(corners[-82][0]),1)
+            p_v = np.concatenate((p_v, np.array([[1],[1]])),axis = 0)
+            ################################################################################################
+            rt = np.concatenate((self.camera_matrix@self.rotation_matrix[i], np.array([[0.,0.,0.,1.]])),axis = 0)
 
-        p3 = rt@x3
-        p3 = p3.reshape(1,len(p3))[0][:2]
+            x1 = np.linalg.inv(rt) @ p1
+            x2 = np.linalg.inv(rt) @ p2
+            x3 = np.linalg.inv(rt) @ p3
+            #x4 = np.linalg.inv(rt) @ p4
+            x4 = x1 + (x3-x1) + (x2-x1)
 
-        p4 = rt@x4
-        p4 = p4.reshape(1,len(p4))[0][:2]
+            x4 = x1 + (x3-x1) + (x2-x1)
+            ################################################################################################
+            x5 = x1 + (x1-x4) 
+            x6 = x2 + (x2-x4) 
+            x7 = x3 + (x3-x4) 
 
-        p5 = rt@x5
-        p5 = p5.reshape(1,len(p5))[0][:2]
+            #print(x3)
+            #print(x2)
+            vec = np.cross((x7-x5).T[0][:3], (x6-x5).T[0][:3])
 
-        p6 = rt@x6
-        p6 = p6.reshape(1,len(p6))[0][:2]
+            vec2 = np.cross((x3-x1).T[0][:3], (x2-x1).T[0][:3])
 
-        p7 = rt@x7
-        p7 = p7.reshape(1,len(p7))[0][:2]
+            vec = vec /(vec**2).sum()**0.5
+            vec2 = vec2 /(vec2**2).sum()**0.5
+            print("ves\n",vec)
+            print("ves2\n",vec2)
+            vec = np.concatenate((vec.reshape(len(vec),1), np.array([[1.]])),axis = 0)
+            #print(((x3-x1).T[0][:3]**2).sum()**0.5)
+            center = (x4+x5+x6+x7)/4
+            x8 = center + vec*((x3-x1).T[0]**2).sum()**0.5
+            x8[3][0] = 1
+            print(x8)
+            ################################################################################################
+            p1 = rt@x1
+            p1 = p1.reshape(1,len(p1))[0][:2]
+            
+            p2 = rt@x2
+            p2 = p2.reshape(1,len(p2))[0][:2]
 
-        p8 = rt@x8
-        p8 = p8.reshape(1,len(p8))[0][:2]
-        ################################################################################################
+            p3 = rt@x3
+            p3 = p3.reshape(1,len(p3))[0][:2]
 
-        #print("P1\n",p1)
+            p3 = rt@x3
+            p3 = p3.reshape(1,len(p3))[0][:2]
 
-        #img = cv2.circle(img,tuple(p1.astype('int')), 30, (0, 255, 255), 3)
-        #img = cv2.circle(img,tuple(p2.astype('int')), 30, (0, 255, 255), 3)
-        #img = cv2.circle(img,tuple(p3.astype('int')), 30, (0, 255, 255), 3)
-        # img = cv2.circle(img,tuple(p4.astype('int')), 30, (0, 255, 255), 3)
-        # img = cv2.circle(img,tuple(p5.astype('int')), 30, (0, 255, 255), 3)
-        # img = cv2.circle(img,tuple(p6.astype('int')), 30, (0, 255, 255), 3)
-        # img = cv2.circle(img,tuple(p7.astype('int')), 30, (0, 255, 255), 3)
-        # img = cv2.circle(img,tuple(p8.astype('int')), 30, (0, 255, 255), 3)
+            p4 = rt@x4
+            p4 = p4.reshape(1,len(p4))[0][:2]
 
-        img = cv2.line(img, tuple(p4.astype('int')), tuple(p6.astype('int')), (0, 0, 255), 10)
-        img = cv2.line(img, tuple(p6.astype('int')), tuple(p5.astype('int')), (0, 0, 255), 10)
-        img = cv2.line(img, tuple(p5.astype('int')), tuple(p7.astype('int')), (0, 0, 255), 10)
-        img = cv2.line(img, tuple(p7.astype('int')), tuple(p4.astype('int')), (0, 0, 255), 10)
+            p5 = rt@x5
+            p5 = p5.reshape(1,len(p5))[0][:2]
 
-        img = cv2.line(img, tuple(p8.astype('int')), tuple(p4.astype('int')), (0, 0, 255), 10)
-        img = cv2.line(img, tuple(p8.astype('int')), tuple(p5.astype('int')), (0, 0, 255), 10)
-        img = cv2.line(img, tuple(p8.astype('int')), tuple(p6.astype('int')), (0, 0, 255), 10)
-        img = cv2.line(img, tuple(p8.astype('int')), tuple(p7.astype('int')), (0, 0, 255), 10)
-        
-        
-        img = cv2.resize(img, (600, 600)) 
-        t = threading.Thread(target = self.diaplay_imgs(img,0))
-        t.start()
+            p6 = rt@x6
+            p6 = p6.reshape(1,len(p6))[0][:2]
+
+            p7 = rt@x7
+            p7 = p7.reshape(1,len(p7))[0][:2]
+
+            p8 = rt@x8
+            #print("p8\n",p8)
+            p8 = p8.reshape(1,len(p8))[0][:2]
+            ################################################################################################
+
+            #print("P1\n",p1)
+
+            #img = cv2.circle(img,tuple(p1.astype('int')), 30, (0, 255, 255), 3)
+            #img = cv2.circle(img,tuple(p2.astype('int')), 30, (0, 255, 255), 3)
+            #img = cv2.circle(img,tuple(p3.astype('int')), 30, (0, 255, 255), 3)
+            # img = cv2.circle(img,tuple(p4.astype('int')), 30, (0, 255, 255), 3)
+            # img = cv2.circle(img,tuple(p5.astype('int')), 30, (0, 255, 255), 3)
+            # img = cv2.circle(img,tuple(p6.astype('int')), 30, (0, 255, 255), 3)
+            # img = cv2.circle(img,tuple(p7.astype('int')), 30, (0, 255, 255), 3)
+            # img = cv2.circle(img,tuple(p8.astype('int')), 30, (0, 255, 255), 3)
+
+            img = cv2.line(img, tuple(p4.astype('int')), tuple(p6.astype('int')), (0, 0, 255), 10)
+            img = cv2.line(img, tuple(p6.astype('int')), tuple(p5.astype('int')), (0, 0, 255), 10)
+            img = cv2.line(img, tuple(p5.astype('int')), tuple(p7.astype('int')), (0, 0, 255), 10)
+            img = cv2.line(img, tuple(p7.astype('int')), tuple(p4.astype('int')), (0, 0, 255), 10)
+
+            img = cv2.line(img, tuple(p8.astype('int')), tuple(p4.astype('int')), (0, 0, 255), 10)
+            img = cv2.line(img, tuple(p8.astype('int')), tuple(p5.astype('int')), (0, 0, 255), 10)
+            img = cv2.line(img, tuple(p8.astype('int')), tuple(p6.astype('int')), (0, 0, 255), 10)
+            img = cv2.line(img, tuple(p8.astype('int')), tuple(p7.astype('int')), (0, 0, 255), 10)
+
+            img = cv2.line(img, tuple(p1.astype('int')), tuple(p8.astype('int')), (0, 0, 255), 10)
+            
+            
+            img = cv2.resize(img, (600, 600)) 
+            pyramid_imgs.append(img)
+        return pyramid_imgs
+        # t = threading.Thread(target = self.diaplay_imgs(img,0))
+        # t.start()
         # point = []
         # self.pyramid_img
         # self.color_imgs
