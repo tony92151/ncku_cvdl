@@ -14,6 +14,7 @@ if sys_pf == 'darwin':
     matplotlib.use("TkAgg")
 
 from matplotlib import pyplot as plt
+from numpy.linalg import inv
 
 import time
 import threading
@@ -51,8 +52,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.distortion_coefficients = []
         self.rotation_matrix = []
 
+        # pyramid
+        self.pyramid_img = []
+
         # pre-read imgs in memory as array
         self.read_img()
+        
 
     def read_img(self):
         for i in range(len(self.imgSortedList)):
@@ -72,6 +77,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.bt_intrinsic.clicked.connect(self.on_bt_intrinsic_click)
         self.bt_distortion.clicked.connect(self.on_bt_distortion_click)
         self.bt_extrinsic.clicked.connect(self.on_bt_extrinsic_click)
+        self.bt_augmented_reality.clicked.connect(self.on_bt_augmented_reality_click)
 
     def on_bt_find_corners_click(self):
         find_corner_img = self.find_imgs_corner()
@@ -185,7 +191,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             if ret == True:
                 self.objpoints.append(objp)
-
+                print(np.array(corners).shape)
                 corners2 = cv2.cornerSubPix(gray,corners,(11,8),(-1,-1),criteria)
                 self.imgpoints.append(corners2)
 
@@ -197,6 +203,37 @@ class MainWindow(QMainWindow, Ui_MainWindow):
                 img = cv2.resize(img, (600, 600)) 
                 find_corner_img.append(img)
         return find_corner_img
+
+
+    def on_bt_augmented_reality_click(self):
+        self.caculate_pyramid()
+
+    def caculate_pyramid(self):
+        if len(self.distortion_coefficients) == 0 :
+            self.camera_calibration()
+        img = self.color_imgs[0]
+        _, corners = cv2.findChessboardCorners(self.gray_imgs[0], (11,8),None)
+        #print(tuple(corners[0][0]))
+        p1 = tuple(corners[-1][0])
+        p2 = tuple(corners[-2][0])
+        p3 = tuple(corners[-12][0])
+        p4 = tuple(corners[-13][0])
+        print(self.rotation_matrix[0])
+        X1 = np.linalg.inv(self.rotation_matrix[0]) #@ inv(self.camera_matrix[0]) #@ np.append(corners[-1][0],[0]).T
+
+        print(X1)
+        img = cv2.circle(img,p1, 30, (0, 255, 255), 3)
+        img = cv2.circle(img,p2, 30, (0, 255, 255), 3)
+        img = cv2.circle(img,p3, 30, (0, 255, 255), 3)
+        img = cv2.circle(img,p4, 30, (0, 255, 255), 3)
+        
+        img = cv2.resize(img, (600, 600)) 
+        t = threading.Thread(target = self.diaplay_imgs(img,0))
+        t.start()
+        # point = []
+        # self.pyramid_img
+        # self.color_imgs
+
         
         
 
