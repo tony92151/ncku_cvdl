@@ -30,19 +30,23 @@ import numpy as np
 
 # print("x:\n",np.linalg.inv(E_kp) @ p)
 
-x1 = np.array([[1],[5],[7],[1]])
+# x1 = np.array([[1],[5],[7],[1]])
 
-x2 = np.array([[2],[1],[2],[1]])
+# x2 = np.array([[2],[1],[2],[1]])
 
-x3 = np.array([[2],[7],[4],[1]])
+# x3 = np.array([[2],[7],[4],[1]])
 
-vec = np.cross((x1-x3).T[0][:3], (x2-x3).T[0][:3])
-print(vec)
-vec = vec /(vec**2).sum()**0.5
-print(vec)
-vec = np.concatenate((vec.reshape(len(vec),1), np.array([[1]])),axis = 0)
-print(vec)
+# vec = np.cross((x1-x3).T[0][:3], (x2-x3).T[0][:3])
+# print(vec)
+# vec = vec /(vec**2).sum()**0.5
+# print(vec)
+# vec = np.concatenate((vec.reshape(len(vec),1), np.array([[1]])),axis = 0)
+# print(vec)
 
-x8 = x3 + vec*1
+# x8 = x3 + vec*1
 
-print(x3)
+# print(x3)
+
+axis = np.float32([[1,1,0], [1,-1,0], [-1,-1,0], [-1,1,0], [0,0,-2]]).reshape(-1,3)
+
+print(axis)

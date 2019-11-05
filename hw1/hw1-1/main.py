@@ -90,9 +90,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         # plt.savefig(path + "/result.jpg")
         # self.diaplay_imgs(path + "/result.jpg")
         
-
-
-
     def on_bt_cancel_click(self):
         sys.exit(app.exec_())
 
@@ -119,14 +116,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def diaplay_imgs(self, imgs, idx):
         leng = len(imgs)
-        #plt.figure(figsize=(10,10))
-        #for i in range(leng):
+
         cv2.imshow('img'+format(idx+1),imgs)
         cv2.waitKey(0)
         # time.sleep(5)
         cv2.destroyAllWindows()
-        #plt.subplot(2,int(leng/2),i)
-        #plt.imshow(imgs)
 
     def camera_calibration(self):
         if len(self.objpoints) == 0 :
@@ -135,6 +129,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.RMS = ret
         self.camera_matrix = mtx
         self.distortion_coefficients = dist.ravel()
+        # for i in range(len(self.color_imgs)):
+        #     self.color_imgs[i] = cv2.undistort(self.color_imgs[i], mtx, dist, None, newcameramtx)
         """
         # rvecs is rotation vector, not the rotation matrix
         # tvecs is translation vector
@@ -143,23 +139,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         extrinsics = np.concatenate((Vr, Tr), axis=1).reshape(-1,6)
         """
         
-        #print(np.array(rvecs).shape)
-        # rt,_ = cv2.Rodrigues(np.array(rvecs)[0])
-
-        
-
-        # Tr = np.array(tvecs)
-        # #rtt = np.append(rt.T, Tr[0])
-
-        # ex = np.concatenate((rt, Tr[0]),axis = 1)
-
-        # print("RT : \n",rt.T)
-        # print("R : \n",rt)
-        # #print("RTT : \n",rtt)
-        # print("TR : \n",Tr[0].T[0])
-        # print("ex : \n",ex)
-        #print(dist)
-        #print(np.array(rt).shape)
         Vr = np.array(rvecs)
         Tr = np.array(tvecs)
         for i in range(len(Tr)):
@@ -181,9 +160,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             objp = np.zeros((8*11,3), np.float32)
             objp[:,:2] = np.mgrid[0:11,0:8].T.reshape(-1,2)
 
-            img = self.color_imgs[i]
+            img = self.color_imgs[i].copy()
             #print(img.shape)
-            gray = self.gray_imgs[i]
+            gray = self.gray_imgs[i].copy()
             #print(gray.shape)
 
             ret, corners = cv2.findChessboardCorners(gray, (11,8),None)
@@ -217,120 +196,147 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             t.start()
 
     def caculate_pyramid(self):
+        criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 500, 0.001)
+        pyramid_dot = np.float32([[1,1,0], [1,-1,0], [-1,-1,0], [-1,1,0], [0,0,-2]]).reshape(-1,5)
+
         pyramid_imgs = []
         if len(self.distortion_coefficients) == 0 :
             self.camera_calibration()
 
-        for i in range(10):
-            img = self.color_imgs[i]
-            _, corners = cv2.findChessboardCorners(self.gray_imgs[i], (11,8),None)
-            #print(tuple(corners[0][0]))
-            ################################################################################################
-            p1 = corners[-1][0].reshape(len(corners[-1][0]),1)
-            p1 = np.concatenate((p1, np.array([[1],[1]])),axis = 0)
+        #for i in range(10):
+        i=0
+        img = self.color_imgs[i].copy()
 
-            p2 = corners[-2][0].reshape(len(corners[-2][0]),1)
-            p2 = np.concatenate((p2, np.array([[1],[1]])),axis = 0)
+        
+        _, corners = cv2.findChessboardCorners(self.gray_imgs[i], (11,8),None)
+        corners2 = cv2.cornerSubPix(self.gray_imgs[i],corners,(11,8),(-1,-1),criteria)
 
-            p3 = corners[-12][0].reshape(len(corners[-12][0]),1)
-            p3 = np.concatenate((p3, np.array([[1],[1]])),axis = 0)
+        # rvecs, tvecs, inliers = cv2.solvePnPRansac(self.objpoints[i], 
+        #                                             self.imgpoints[i], 
+        #                                             self.camera_matrix[i], 
+        #                                             self.distortion_coefficients.astype(float))
 
-            p4 = corners[-13][0].reshape(len(corners[-13][0]),1)
-            p4 = np.concatenate((p4, np.array([[1],[1]])),axis = 0)
+        ret, mtx, dist, rvecs, tvecs  = cv2.calibrateCamera(self.objpoints, self.imgpoints, self.gray_imgs[0].shape[::-1],None,None)
 
-            p_h = corners[-11][0].reshape(len(corners[-11][0]),1)
-            p_h = np.concatenate((p_h, np.array([[1],[1]])),axis = 0)
+        dist64 = np.array(dist, dtype = np.float64)[0]
+        distortion = np.array([ 0.12168904,  1.70231151,  0.04272291,  0.08605422, -3.63581666],dtype = np.float64)
+        print(dist64)
+        imgpts, jac = cv2.projectPoints(pyramid_dot, 
+                                        rvecs[i], 
+                                        tvecs[i], 
+                                        mtx, 
+                                        dist)
+        #print(tuple(corners[0][0]))
+        ################################################################################################
 
-            p_v = corners[-82][0].reshape(len(corners[-82][0]),1)
-            p_v = np.concatenate((p_v, np.array([[1],[1]])),axis = 0)
-            ################################################################################################
-            rt = np.concatenate((self.camera_matrix@self.rotation_matrix[i], np.array([[0.,0.,0.,1.]])),axis = 0)
+        img = cv2.line(img, corners2, tuple(imgpts[0].ravel()), (255,0,0), 5)
 
-            x1 = np.linalg.inv(rt) @ p1
-            x2 = np.linalg.inv(rt) @ p2
-            x3 = np.linalg.inv(rt) @ p3
-            #x4 = np.linalg.inv(rt) @ p4
-            x4 = x1 + (x3-x1) + (x2-x1)
+        #     ################################################################################################
+        #     p1 = corners[-1][0].reshape(len(corners[-1][0]),1)
+        #     p1 = np.concatenate((p1, np.array([[1],[1]])),axis = 0)
 
-            x4 = x1 + (x3-x1) + (x2-x1)
-            ################################################################################################
-            x5 = x1 + (x1-x4) 
-            x6 = x2 + (x2-x4) 
-            x7 = x3 + (x3-x4) 
+        #     p2 = corners[-2][0].reshape(len(corners[-2][0]),1)
+        #     p2 = np.concatenate((p2, np.array([[1],[1]])),axis = 0)
 
-            #print(x3)
-            #print(x2)
-            vec = np.cross((x7-x5).T[0][:3], (x6-x5).T[0][:3])
+        #     p3 = corners[-12][0].reshape(len(corners[-12][0]),1)
+        #     p3 = np.concatenate((p3, np.array([[1],[1]])),axis = 0)
 
-            vec2 = np.cross((x3-x1).T[0][:3], (x2-x1).T[0][:3])
+        #     p4 = corners[-13][0].reshape(len(corners[-13][0]),1)
+        #     p4 = np.concatenate((p4, np.array([[1],[1]])),axis = 0)
 
-            vec = vec /(vec**2).sum()**0.5
-            vec2 = vec2 /(vec2**2).sum()**0.5
-            print("ves\n",vec)
-            print("ves2\n",vec2)
-            vec = np.concatenate((vec.reshape(len(vec),1), np.array([[1.]])),axis = 0)
-            #print(((x3-x1).T[0][:3]**2).sum()**0.5)
-            center = (x4+x5+x6+x7)/4
-            x8 = center + vec*((x3-x1).T[0]**2).sum()**0.5
-            x8[3][0] = 1
-            print(x8)
-            ################################################################################################
-            p1 = rt@x1
-            p1 = p1.reshape(1,len(p1))[0][:2]
+        #     p_h = corners[-11][0].reshape(len(corners[-11][0]),1)
+        #     p_h = np.concatenate((p_h, np.array([[1],[1]])),axis = 0)
+
+        #     p_v = corners[-82][0].reshape(len(corners[-82][0]),1)
+        #     p_v = np.concatenate((p_v, np.array([[1],[1]])),axis = 0)
+        #     ################################################################################################
+        #     rt = np.concatenate((self.camera_matrix@self.rotation_matrix[i], np.array([[0.,0.,0.,1.]])),axis = 0)
+
+        #     x1 = np.linalg.inv(rt) @ p1
+        #     x2 = np.linalg.inv(rt) @ p2
+        #     x3 = np.linalg.inv(rt) @ p3
+        #     #x4 = np.linalg.inv(rt) @ p4
+        #     x4 = x1 + (x3-x1) + (x2-x1)
+
+        #     x4 = x1 + (x3-x1) + (x2-x1)
+        #     ################################################################################################
+        #     x5 = x1 + (x1-x4) 
+        #     x6 = x2 + (x2-x4) 
+        #     x7 = x3 + (x3-x4) 
+
+        #     #print(x3)
+        #     #print(x2)
+        #     vec = np.cross((x7-x5).T[0][:3], (x6-x5).T[0][:3])
+
+        #     vec2 = np.cross((x3-x1).T[0][:3], (x2-x1).T[0][:3])
+
+        #     vec = vec /(vec**2).sum()**0.5
+        #     vec2 = vec2 /(vec2**2).sum()**0.5
+        #     print("ves\n",vec)
+        #     print("ves2\n",vec2)
+        #     vec = np.concatenate((vec.reshape(len(vec),1), np.array([[1.]])),axis = 0)
+        #     #print(((x3-x1).T[0][:3]**2).sum()**0.5)
+        #     center = (x4+x5+x6+x7)/4
+        #     x8 = center + vec*((x3-x1).T[0]**2).sum()**0.5
+        #     x8[3][0] = 1
+        #     print(x8)
+        #     ################################################################################################
+        #     p1 = rt@x1
+        #     p1 = p1.reshape(1,len(p1))[0][:2]
             
-            p2 = rt@x2
-            p2 = p2.reshape(1,len(p2))[0][:2]
+        #     p2 = rt@x2
+        #     p2 = p2.reshape(1,len(p2))[0][:2]
 
-            p3 = rt@x3
-            p3 = p3.reshape(1,len(p3))[0][:2]
+        #     p3 = rt@x3
+        #     p3 = p3.reshape(1,len(p3))[0][:2]
 
-            p3 = rt@x3
-            p3 = p3.reshape(1,len(p3))[0][:2]
+        #     p3 = rt@x3
+        #     p3 = p3.reshape(1,len(p3))[0][:2]
 
-            p4 = rt@x4
-            p4 = p4.reshape(1,len(p4))[0][:2]
+        #     p4 = rt@x4
+        #     p4 = p4.reshape(1,len(p4))[0][:2]
 
-            p5 = rt@x5
-            p5 = p5.reshape(1,len(p5))[0][:2]
+        #     p5 = rt@x5
+        #     p5 = p5.reshape(1,len(p5))[0][:2]
 
-            p6 = rt@x6
-            p6 = p6.reshape(1,len(p6))[0][:2]
+        #     p6 = rt@x6
+        #     p6 = p6.reshape(1,len(p6))[0][:2]
 
-            p7 = rt@x7
-            p7 = p7.reshape(1,len(p7))[0][:2]
+        #     p7 = rt@x7
+        #     p7 = p7.reshape(1,len(p7))[0][:2]
 
-            p8 = rt@x8
-            #print("p8\n",p8)
-            p8 = p8.reshape(1,len(p8))[0][:2]
-            ################################################################################################
+        #     p8 = rt@x8
+        #     #print("p8\n",p8)
+        #     p8 = p8.reshape(1,len(p8))[0][:2]
+        #     ################################################################################################
 
-            #print("P1\n",p1)
+        #     #print("P1\n",p1)
 
-            #img = cv2.circle(img,tuple(p1.astype('int')), 30, (0, 255, 255), 3)
-            #img = cv2.circle(img,tuple(p2.astype('int')), 30, (0, 255, 255), 3)
-            #img = cv2.circle(img,tuple(p3.astype('int')), 30, (0, 255, 255), 3)
-            # img = cv2.circle(img,tuple(p4.astype('int')), 30, (0, 255, 255), 3)
-            # img = cv2.circle(img,tuple(p5.astype('int')), 30, (0, 255, 255), 3)
-            # img = cv2.circle(img,tuple(p6.astype('int')), 30, (0, 255, 255), 3)
-            # img = cv2.circle(img,tuple(p7.astype('int')), 30, (0, 255, 255), 3)
-            # img = cv2.circle(img,tuple(p8.astype('int')), 30, (0, 255, 255), 3)
+        #     #img = cv2.circle(img,tuple(p1.astype('int')), 30, (0, 255, 255), 3)
+        #     #img = cv2.circle(img,tuple(p2.astype('int')), 30, (0, 255, 255), 3)
+        #     #img = cv2.circle(img,tuple(p3.astype('int')), 30, (0, 255, 255), 3)
+        #     # img = cv2.circle(img,tuple(p4.astype('int')), 30, (0, 255, 255), 3)
+        #     # img = cv2.circle(img,tuple(p5.astype('int')), 30, (0, 255, 255), 3)
+        #     # img = cv2.circle(img,tuple(p6.astype('int')), 30, (0, 255, 255), 3)
+        #     # img = cv2.circle(img,tuple(p7.astype('int')), 30, (0, 255, 255), 3)
+        #     # img = cv2.circle(img,tuple(p8.astype('int')), 30, (0, 255, 255), 3)
 
-            img = cv2.line(img, tuple(p4.astype('int')), tuple(p6.astype('int')), (0, 0, 255), 10)
-            img = cv2.line(img, tuple(p6.astype('int')), tuple(p5.astype('int')), (0, 0, 255), 10)
-            img = cv2.line(img, tuple(p5.astype('int')), tuple(p7.astype('int')), (0, 0, 255), 10)
-            img = cv2.line(img, tuple(p7.astype('int')), tuple(p4.astype('int')), (0, 0, 255), 10)
+        #     img = cv2.line(img, tuple(p4.astype('int')), tuple(p6.astype('int')), (0, 0, 255), 10)
+        #     img = cv2.line(img, tuple(p6.astype('int')), tuple(p5.astype('int')), (0, 0, 255), 10)
+        #     img = cv2.line(img, tuple(p5.astype('int')), tuple(p7.astype('int')), (0, 0, 255), 10)
+        #     img = cv2.line(img, tuple(p7.astype('int')), tuple(p4.astype('int')), (0, 0, 255), 10)
 
-            img = cv2.line(img, tuple(p8.astype('int')), tuple(p4.astype('int')), (0, 0, 255), 10)
-            img = cv2.line(img, tuple(p8.astype('int')), tuple(p5.astype('int')), (0, 0, 255), 10)
-            img = cv2.line(img, tuple(p8.astype('int')), tuple(p6.astype('int')), (0, 0, 255), 10)
-            img = cv2.line(img, tuple(p8.astype('int')), tuple(p7.astype('int')), (0, 0, 255), 10)
+        #     img = cv2.line(img, tuple(p8.astype('int')), tuple(p4.astype('int')), (0, 0, 255), 10)
+        #     img = cv2.line(img, tuple(p8.astype('int')), tuple(p5.astype('int')), (0, 0, 255), 10)
+        #     img = cv2.line(img, tuple(p8.astype('int')), tuple(p6.astype('int')), (0, 0, 255), 10)
+        #     img = cv2.line(img, tuple(p8.astype('int')), tuple(p7.astype('int')), (0, 0, 255), 10)
 
-            img = cv2.line(img, tuple(p1.astype('int')), tuple(p8.astype('int')), (0, 0, 255), 10)
+        #     img = cv2.line(img, tuple(p1.astype('int')), tuple(p8.astype('int')), (0, 0, 255), 10)
             
             
-            img = cv2.resize(img, (600, 600)) 
-            pyramid_imgs.append(img)
-        return pyramid_imgs
+        #     img = cv2.resize(img, (600, 600)) 
+        #     pyramid_imgs.append(img)
+        return img
         # t = threading.Thread(target = self.diaplay_imgs(img,0))
         # t.start()
         # point = []
