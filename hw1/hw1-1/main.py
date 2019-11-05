@@ -222,7 +222,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             self.camera_calibration()
 
         for i in range(10):
-            img = self.color_imgs[i]
+            img = self.color_imgs[i].copy()
             _, corners = cv2.findChessboardCorners(self.gray_imgs[i], (11,8),None)
             #print(tuple(corners[0][0]))
             ################################################################################################
@@ -252,7 +252,6 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             #x4 = np.linalg.inv(rt) @ p4
             x4 = x1 + (x3-x1) + (x2-x1)
 
-            x4 = x1 + (x3-x1) + (x2-x1)
             ################################################################################################
             x5 = x1 + (x1-x4) 
             x6 = x2 + (x2-x4) 
@@ -260,20 +259,18 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
             #print(x3)
             #print(x2)
-            vec = np.cross((x7-x5).T[0][:3], (x6-x5).T[0][:3])
-
-            vec2 = np.cross((x3-x1).T[0][:3], (x2-x1).T[0][:3])
+            vec = np.cross((p_v-x5).T[0][:3], (p_h-x5).T[0][:3])
 
             vec = vec /(vec**2).sum()**0.5
-            vec2 = vec2 /(vec2**2).sum()**0.5
-            print("ves\n",vec)
-            print("ves2\n",vec2)
+
+            #print("ves+\n",vec)
+            #print("ves\n",500*(x2-x1).T[0][:3])
             vec = np.concatenate((vec.reshape(len(vec),1), np.array([[1.]])),axis = 0)
             #print(((x3-x1).T[0][:3]**2).sum()**0.5)
             center = (x4+x5+x6+x7)/4
-            x8 = center + vec*((x3-x1).T[0]**2).sum()**0.5
+            x8 = center + vec*((x3-x1).T[0]**2).sum()**0.5 + 0.4*(x2-x1)
             x8[3][0] = 1
-            print(x8)
+            #print(x8)
             ################################################################################################
             p1 = rt@x1
             p1 = p1.reshape(1,len(p1))[0][:2]
@@ -325,7 +322,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
             img = cv2.line(img, tuple(p8.astype('int')), tuple(p6.astype('int')), (0, 0, 255), 10)
             img = cv2.line(img, tuple(p8.astype('int')), tuple(p7.astype('int')), (0, 0, 255), 10)
 
-            img = cv2.line(img, tuple(p1.astype('int')), tuple(p8.astype('int')), (0, 0, 255), 10)
+            #img = cv2.line(img, tuple(p1.astype('int')), tuple(p8.astype('int')), (0, 0, 255), 10)
             
             
             img = cv2.resize(img, (600, 600)) 
