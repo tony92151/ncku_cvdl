@@ -79,6 +79,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.bt_extrinsic.clicked.connect(self.on_bt_extrinsic_click)
         self.bt_augmented_reality.clicked.connect(self.on_bt_augmented_reality_click)
 
+        self.bt_rot_scale_translate.clicked.connect(self.on_bt_rot_scale_translate_click)
+
     def on_bt_find_corners_click(self):
         find_corner_img = self.find_imgs_corner()
         #plt.figure(figsize=(10,10))
@@ -113,6 +115,40 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #print(self.selected_img[:-4])
         idx = self.selected_img[:-4]
         print ("Extrinsic matrix of img "+idx+" :\n", self.rotation_matrix[int(idx)-1])
+
+    def on_bt_rot_scale_translate_click(self):
+        try:
+            angel = int(self.lineEdit_angle.text())
+        except:
+            angel = 0
+
+        try:
+            scale = int(self.lineEdit_scale.text())
+        except:
+            scale = 1.0
+
+        try:
+            tx = int(self.lineEdit_tx.text())
+        except:
+            tx = 0
+        
+        try:
+            ty = int(self.lineEdit_ty.text())
+        except:
+            ty = 0
+
+        imgE = cv2.imread(path + os.sep + "OriginalTransform.png")
+
+        R = cv2.getRotationMatrix2D((130,125),angel,scale)
+
+        rows,cols = imgE.shape[:2]
+        H = np.float32([[1,0,tx],[0,1,ty]])
+        res = cv2.warpAffine(imgE,R,(cols,rows))
+        res = cv2.warpAffine(res,H,(cols,rows))
+
+        t = threading.Thread(target = self.diaplay_imgs(res,0))
+        t.start()
+        #print(angel)
 
     def comboBox_onChanged(self,text):
         self.selected_img = text
