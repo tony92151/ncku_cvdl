@@ -221,10 +221,10 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         p2 = corners[-2][0].reshape(len(corners[-2][0]),1)
         p2 = np.concatenate((p2, np.array([[1],[1]])),axis = 0)
 
-        p3 = corners[-12][0]
+        p3 = corners[-12][0].reshape(len(corners[-12][0]),1)
         p3 = np.concatenate((p3, np.array([[1],[1]])),axis = 0)
 
-        p4 = corners[-13][0]
+        p4 = corners[-13][0].reshape(len(corners[-13][0]),1)
         p4 = np.concatenate((p4, np.array([[1],[1]])),axis = 0)
         ################################################################################################
         rt = np.concatenate((self.camera_matrix@self.rotation_matrix[0], np.array([[0.,0.,0.,1.]])),axis = 0)
@@ -234,19 +234,69 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         x3 = np.linalg.inv(rt) @ p3
         x4 = np.linalg.inv(rt) @ p4
         ################################################################################################
+        x5 = x1 + (x1-x4) 
+        x6 = x2 + (x2-x4) 
+        x7 = x3 + (x3-x4) 
 
-
+        print(x3)
+        print(x2)
+        vec = np.cross((x3-x1).T[0][:3], (x2-x1).T[0][:3])
+        vec = vec /(vec**2).sum()**0.5
+        print(vec)
+        vec = np.concatenate((vec.reshape(len(vec),1), np.array([[1]])),axis = 0)
+        print(((x3-x1).T[0][:3]**2).sum()**0.5)
+        x8 = x1 - 0.1*vec*(0.5*pow(3,0.5))*((x3-x1).T[0][:3]**2).sum()**0.5
+        print(x8)
+        ################################################################################################
         p1 = rt@x1
         p1 = p1.reshape(1,len(p1))[0][:2]
+        
+        p2 = rt@x2
+        p2 = p2.reshape(1,len(p2))[0][:2]
 
-        print("P1\n",p1)
+        p3 = rt@x3
+        p3 = p3.reshape(1,len(p3))[0][:2]
 
-        #X1 = np.linalg.inv(self.rotation_matrix[0]) #@ inv(self.camera_matrix[0]) #@ np.append(corners[-1][0],[0]).T
-        #print(X1)
-        img = cv2.circle(img,tuple(p1.astype('int')), 30, (0, 255, 255), 3)
-        img = cv2.circle(img,tuple(p2.astype('int')), 30, (0, 255, 255), 3)
-        img = cv2.circle(img,tuple(p3.astype('int')), 30, (0, 255, 255), 3)
-        img = cv2.circle(img,tuple(p4.astype('int')), 30, (0, 255, 255), 3)
+        p3 = rt@x3
+        p3 = p3.reshape(1,len(p3))[0][:2]
+
+        p4 = rt@x4
+        p4 = p4.reshape(1,len(p4))[0][:2]
+
+        p5 = rt@x5
+        p5 = p5.reshape(1,len(p5))[0][:2]
+
+        p6 = rt@x6
+        p6 = p6.reshape(1,len(p6))[0][:2]
+
+        p7 = rt@x7
+        p7 = p7.reshape(1,len(p7))[0][:2]
+
+        p8 = rt@x8
+        p8 = p8.reshape(1,len(p8))[0][:2]
+        ################################################################################################
+
+        #print("P1\n",p1)
+
+        #img = cv2.circle(img,tuple(p1.astype('int')), 30, (0, 255, 255), 3)
+        #img = cv2.circle(img,tuple(p2.astype('int')), 30, (0, 255, 255), 3)
+        #img = cv2.circle(img,tuple(p3.astype('int')), 30, (0, 255, 255), 3)
+        # img = cv2.circle(img,tuple(p4.astype('int')), 30, (0, 255, 255), 3)
+        # img = cv2.circle(img,tuple(p5.astype('int')), 30, (0, 255, 255), 3)
+        # img = cv2.circle(img,tuple(p6.astype('int')), 30, (0, 255, 255), 3)
+        # img = cv2.circle(img,tuple(p7.astype('int')), 30, (0, 255, 255), 3)
+        # img = cv2.circle(img,tuple(p8.astype('int')), 30, (0, 255, 255), 3)
+
+        img = cv2.line(img, tuple(p4.astype('int')), tuple(p6.astype('int')), (0, 0, 255), 10)
+        img = cv2.line(img, tuple(p6.astype('int')), tuple(p5.astype('int')), (0, 0, 255), 10)
+        img = cv2.line(img, tuple(p5.astype('int')), tuple(p7.astype('int')), (0, 0, 255), 10)
+        img = cv2.line(img, tuple(p7.astype('int')), tuple(p4.astype('int')), (0, 0, 255), 10)
+
+        img = cv2.line(img, tuple(p8.astype('int')), tuple(p4.astype('int')), (0, 0, 255), 10)
+        img = cv2.line(img, tuple(p8.astype('int')), tuple(p5.astype('int')), (0, 0, 255), 10)
+        img = cv2.line(img, tuple(p8.astype('int')), tuple(p6.astype('int')), (0, 0, 255), 10)
+        img = cv2.line(img, tuple(p8.astype('int')), tuple(p7.astype('int')), (0, 0, 255), 10)
+        
         
         img = cv2.resize(img, (600, 600)) 
         t = threading.Thread(target = self.diaplay_imgs(img,0))
