@@ -101,6 +101,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         else:
             for i in range(50):
                 self.cifar.step()
+            torch.save(self.cifar.model, path+'/net.pkl')
             #self.cifar.show_acc_and_loss()
 
     def on_bt_show_training_result_click(self):
