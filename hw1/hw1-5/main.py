@@ -51,6 +51,17 @@ path = os.getcwd()
 qtCreatorFile = path + os.sep + "mainwindow.ui"
 Ui_MainWindow, QtBaseClass = uic.loadUiType(qtCreatorFile) 
 
+dict = {'0': "airplain",
+        '1': "automobile",
+        '2': "bird",
+        '3': "cat",
+        '4': "deer",
+        '5': "dog",
+        '6': "frog",
+        '7': "horse",
+        '8': "ship",
+        '9': "truck"}
+
 
 
 class MainWindow(QMainWindow, Ui_MainWindow):
@@ -97,9 +108,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 class training_agent():
     def __init__(self):
         self.epoch = 0
-        self.batch = 32
-        self.learning_rate = 0.001
-        self.optimizer = 'SGD'
+        self.batch = 64
+        self.learning_rate = 0.0005
+        self.optimizer_show = 'SGD'
 
         ##############################
         self.if_have_data = False
@@ -110,7 +121,7 @@ class training_agent():
         self.test_data = None
         self.test_loader = None
         ##############################
-        self.model = models.resnet18()
+        self.model = models.resnet50()
         self.model.to(device)
 
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
@@ -141,16 +152,20 @@ class training_agent():
             plt.figure(12)
             #axes = fig.add_subplot(111)
             for i in range(10):   
-                print("plot")
+                #print("plot")
                 plt.subplot(2,5,i+1)
                 plt.imshow(transforms.ToPILImage()(self.train_loader.dataset[i][0]).convert('RGB'))
-                plt.title(self.train_loader.dataset[i][1])
+                plt.title(dict[format(self.train_loader.dataset[i][1])])
             plt.show(block=False)
             plt.savefig(path+'/images.png')
         except:
             pass
         
     def step(self):
+        self.train()
+        self.test()
+
+    def train(self):
         los = []
         self.model.train()
         self.epoch += 1
@@ -162,18 +177,43 @@ class training_agent():
             self.optimizer.zero_grad()
             loss.backward()
             self.optimizer.step()
-            los.append(loss.detach().numpy()) 
-            if step % 50 == 0:
+            if torch.cuda.is_available():
+                los.append(loss.cpu().detach().numpy()) 
+            else:
+                los.append(loss.detach().numpy()) 
+            if step % 100 == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     self.epoch, 
                     step * len(data), 
                     len(self.train_loader.dataset),
                     100. * step / len(self.train_loader), 
                     loss.data.item()))
-        print("Finish")
-        
         self.loss_plot.append(sum(los)/len(los))
-        print(self.loss_plot)
+        # print(self.loss_plot)
+
+    def test(self):
+        self.model.eval()
+        avloss = []
+        correct = 0
+        for step, (x, y) in enumerate(self.test_loader):
+            data = Variable(x).to(device)
+            target = Variable(y).to(device)
+            output = self.model(data)
+            loss = self.loss_func(output, target)
+            pred = output.data.max(1, keepdim=True)[1]
+            correct += pred.eq(target.data.view_as(pred)).cpu().sum()
+            if torch.cuda.is_available():
+                avloss.append(loss.cpu().detach().numpy()) 
+            else:
+                avloss.append(loss.detach().numpy()) 
+            
+            
+        print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+                    sum(avloss)/len(avloss), 
+                    correct, 
+                    len(self.test_loader.dataset),
+                    100. * correct / len(self.test_loader.dataset)))
+        self.acc_plot.append(correct)
 
 
     def download_data(self):
@@ -193,7 +233,7 @@ class training_agent():
         print("hyperparameter :")
         print("batch :",self.batch)
         print("learning rate :",self.learning_rate)
-        print("optimizer :",self.optimizer)
+        print("optimizer :",self.optimizer_show)
         print("================================")
 
     def notice(self):
