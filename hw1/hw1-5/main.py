@@ -93,7 +93,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_bt_train_1_epoch_click(self):
         if not self.cifar.if_have_data:
             self.cifar.init_data()
-        self.cifar.step()
+        
+        if not True:
+            self.cifar.step()
+        else:
+            # for i in range(50):
+            #     self.cifar.step()
+            self.cifar.show_acc_and_loss()
 
     def on_bt_show_training_result_click(self):
         pass
@@ -124,7 +130,7 @@ class training_agent():
         self.data_display = None
         self.display_loader = None
         ##############################
-        self.model = models.resnet50()
+        self.model = models.resnet18()
         self.model.to(device)
 
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate, momentum=0.9, weight_decay=5e-4)
@@ -180,7 +186,23 @@ class training_agent():
         except:
             pass
         pass
-        
+
+    def show_acc_and_loss(self):
+        plt.close()
+        try:
+            plt.figure("Acc Loss")
+            plt.subplot(2,1,1)
+            plt.plot(self.loss_plot)
+            plt.title("Loss")
+            plt.subplot(2,1,2)
+            plt.plot(self.acc_plot)
+            plt.title("Acc")
+            plt.show(block=False)
+            #plt.savefig(path+'/images.png')
+        except:
+            pass
+
+
     def step(self):
         self.train()
         self.test()
