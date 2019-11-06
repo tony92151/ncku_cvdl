@@ -96,7 +96,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not self.cifar.if_have_data:
             self.cifar.init_data()
         
-        if not True:
+        if  True:
             self.cifar.step()
         else:
             for i in range(50):
@@ -321,7 +321,7 @@ class training_agent():
                     correct, 
                     len(self.test_loader.dataset),
                     100. * correct / len(self.test_loader.dataset)))
-        self.acc_plot.append(correct/self.test_length)
+        self.acc_plot.append(100.0*correct/self.test_length)
 
 
     def download_data(self):
