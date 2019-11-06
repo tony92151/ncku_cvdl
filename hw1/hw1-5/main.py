@@ -69,8 +69,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
         self.onBindingUI()
-
         self.cifar = training_agent()
+
+        self.lineEdit_idx.setPlaceholderText("(0~9999)")
 
 
     def onBindingUI(self):
@@ -108,7 +109,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_bt_interface_click(self):
         if not self.cifar.if_have_data:
             self.cifar.init_data()
-        self.cifar.predict(10)
+        try:
+            id = int(self.lineEdit_idx.text())
+        except:
+            id = 0
+        
+        #pre = self.cifar.predict(id)
+        lab = [dict[format(i)] for i in range(10)]
+
+        self.cifar.plot_predict(id,lab)
+        # print(pre)
+        # print(lab)
         #print(self.cifar.train_length)
         #print(self.cifar.test_length)
 
@@ -143,7 +154,7 @@ class training_agent():
             nn.Dropout(p=0.1, inplace=False),
             nn.Linear(in_features=512, out_features=128, bias=True),
             nn.Linear(in_features=128, out_features=10, bias=True),
-            nn.Softmax()
+            nn.Softmax(dim=0)
             )
         self.model.to(device)
 
@@ -237,8 +248,27 @@ class training_agent():
         else:
             output = output.detach().numpy()
 
-        print(output[0])
-        pass
+        #print(output[0])
+        return output[0],img_show
+        #pass
+
+    def plot_predict(self,idx,lab):
+        pre,img_show = self.predict(idx)
+        plt.close()
+        try:
+            plt.figure("Predict")
+            plt.subplot(2,3,1)
+            plt.imshow(transforms.ToPILImage()(img_show).convert('RGB'))
+            plt.title("Predict image")
+            plt.subplot(2,1,2)
+            plt.bar(lab,pre)
+            plt.title("Result")
+            plt.xticks(rotation=30)
+            
+            plt.show(block=False)
+            #plt.savefig(path+'/images.png')
+        except:
+            pass
 
     def train(self):
         los = []
@@ -290,7 +320,7 @@ class training_agent():
                     correct, 
                     len(self.test_loader.dataset),
                     100. * correct / len(self.test_loader.dataset)))
-        self.acc_plot.append(correct)
+        self.acc_plot.append(correct/self.test_length)
 
 
     def download_data(self):
