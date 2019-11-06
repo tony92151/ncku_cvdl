@@ -109,7 +109,7 @@ class training_agent():
     def __init__(self):
         self.epoch = 0
         self.batch = 64
-        self.learning_rate = 0.0005
+        self.learning_rate = 0.01
         self.optimizer_show = 'SGD'
 
         ##############################
@@ -117,14 +117,17 @@ class training_agent():
 
         self.train_data = None
         self.train_loader = None
-
+        
         self.test_data = None
         self.test_loader = None
+        
+        self.data_display = None
+        self.display_loader = None
         ##############################
         self.model = models.resnet50()
         self.model.to(device)
 
-        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate, momentum=0.9, weight_decay=5e-4)
         self.loss_func = nn.CrossEntropyLoss()
 
         self.loss_plot = []
@@ -143,6 +146,9 @@ class training_agent():
         self.test_loader = torch.utils.data.DataLoader(dataset=self.test_data,
                                                         batch_size=self.batch,
                                                         shuffle=False)
+        self.display_loader = torch.utils.data.DataLoader(dataset=self.data_display,
+                                                        batch_size=self.batch,
+                                                        shuffle=False)
         self.if_have_data = True
 
     def show_image(self):
@@ -154,8 +160,8 @@ class training_agent():
             for i in range(10):   
                 #print("plot")
                 plt.subplot(2,5,i+1)
-                plt.imshow(transforms.ToPILImage()(self.train_loader.dataset[i][0]).convert('RGB'))
-                plt.title(dict[format(self.train_loader.dataset[i][1])])
+                plt.imshow(transforms.ToPILImage()(self.display_loader.dataset[i][0]).convert('RGB'))
+                plt.title(dict[format(self.display_loader.dataset[i][1])])
             plt.show(block=False)
             plt.savefig(path+'/images.png')
         except:
@@ -217,16 +223,28 @@ class training_agent():
 
 
     def download_data(self):
-        self.train_data = torchvision.datasets.CIFAR10(
+        transform = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomGrayscale(),
+            transforms.ToTensor(),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
+
+        self.data_display = torchvision.datasets.CIFAR10(
             root = path+'/data',
             train = True,
             transform=torchvision.transforms.ToTensor(),
             download=True,
         )
+        self.train_data = torchvision.datasets.CIFAR10(
+            root = path+'/data',
+            train = True,
+            transform=transform,
+            download=True,
+        )
         self.test_data = torchvision.datasets.CIFAR10(
             root='./data/',
             train=False,
-            transform=torchvision.transforms.ToTensor())
+            transform=transform)
 
     def show_hyperparameter(self):
         print("================================")
