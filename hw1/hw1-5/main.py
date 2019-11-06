@@ -152,10 +152,11 @@ class training_agent():
         self.if_have_data = True
 
     def show_image(self):
+        plt.close()
         #print(len(self.train_data.train_data))
         #print(len(self.train_data.train_labels))
         try:
-            plt.figure(12)
+            plt.figure("Train images")
             #axes = fig.add_subplot(111)
             for i in range(10):   
                 #print("plot")
@@ -163,13 +164,26 @@ class training_agent():
                 plt.imshow(transforms.ToPILImage()(self.display_loader.dataset[i][0]).convert('RGB'))
                 plt.title(dict[format(self.display_loader.dataset[i][1])])
             plt.show(block=False)
-            plt.savefig(path+'/images.png')
+            #plt.savefig(path+'/images.png')
         except:
             pass
+
+    def show_loss_plot(self):
+        plt.close()
+        try:
+            plt.figure("Train loss plot") 
+            plt.plot(self.loss_plot)
+            plt.title("Train loss plot")
+            plt.show(block=False)
+            #plt.savefig(path+'/images.png')
+        except:
+            pass
+        pass
         
     def step(self):
         self.train()
         self.test()
+        self.show_loss_plot()
 
     def train(self):
         los = []
