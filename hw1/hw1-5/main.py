@@ -96,12 +96,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not self.cifar.if_have_data:
             self.cifar.init_data()
         
-        if  True:
+        if True:
             self.cifar.step()
         else:
             for i in range(50):
                 self.cifar.step()
-            torch.save(self.cifar.model, path+'/net.pkl')
+            torch.save(self.cifar.model, path+'/50net.pkl')
             #self.cifar.show_acc_and_loss()
 
     def on_bt_show_training_result_click(self):
@@ -152,10 +152,10 @@ class training_agent():
 
         self.model = models.resnet18()
         self.model.fc = nn.Sequential(
-            nn.Dropout(p=0.1, inplace=False),
+            #nn.Dropout(p=0.1, inplace=False),
             nn.Linear(in_features=512, out_features=128, bias=True),
             nn.Linear(in_features=128, out_features=10, bias=True),
-            nn.Softmax(dim=0)
+            nn.Softmax(dim=1)
             )
         self.model.to(device)
 
