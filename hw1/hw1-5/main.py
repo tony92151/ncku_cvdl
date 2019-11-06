@@ -82,7 +82,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.bt_interface.clicked.connect(self.on_bt_interface_click)
        
     def on_bt_show_train_images_click(self):
-        self.cifar.init_data()
+        if not self.cifar.if_have_data:
+            self.cifar.init_data()
         #print("init")
         t = threading.Thread(target = self.cifar.show_image())
         t.start()
@@ -97,15 +98,19 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         if not True:
             self.cifar.step()
         else:
-            # for i in range(50):
-            #     self.cifar.step()
-            self.cifar.show_acc_and_loss()
+            for i in range(50):
+                self.cifar.step()
+            #self.cifar.show_acc_and_loss()
 
     def on_bt_show_training_result_click(self):
-        pass
+        self.cifar.show_acc_and_loss()
 
     def on_bt_interface_click(self):
-        pass
+        if not self.cifar.if_have_data:
+            self.cifar.init_data()
+        self.cifar.predict(10)
+        #print(self.cifar.train_length)
+        #print(self.cifar.test_length)
 
 ##################################################################
 ##################################################################
@@ -118,6 +123,9 @@ class training_agent():
         self.learning_rate = 0.01
         self.optimizer_show = 'SGD'
 
+        self.train_length = 0
+        self.test_length = 0
+
         ##############################
         self.if_have_data = False
 
@@ -126,11 +134,17 @@ class training_agent():
         
         self.test_data = None
         self.test_loader = None
-        
-        self.data_display = None
-        self.display_loader = None
         ##############################
+
+        self.unorm = UnNormalize(mean=(0.4914, 0.4822, 0.4465), std= (0.2023, 0.1994, 0.2010))
+
         self.model = models.resnet18()
+        self.model.fc = nn.Sequential(
+            nn.Dropout(p=0.1, inplace=False),
+            nn.Linear(in_features=512, out_features=128, bias=True),
+            nn.Linear(in_features=128, out_features=10, bias=True),
+            nn.Softmax()
+            )
         self.model.to(device)
 
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate, momentum=0.9, weight_decay=5e-4)
@@ -153,10 +167,9 @@ class training_agent():
         self.test_loader = torch.utils.data.DataLoader(dataset=self.test_data,
                                                         batch_size=self.batch,
                                                         shuffle=False)
-        self.display_loader = torch.utils.data.DataLoader(dataset=self.data_display,
-                                                        batch_size=self.batch,
-                                                        shuffle=False)
         self.if_have_data = True
+        self.train_length = len(self.train_data)
+        self.test_length = len(self.test_data)
 
     def show_image(self):
         plt.close()
@@ -168,8 +181,9 @@ class training_agent():
             for i in range(10):   
                 #print("plot")
                 plt.subplot(2,5,i+1)
-                plt.imshow(transforms.ToPILImage()(self.display_loader.dataset[i][0]).convert('RGB'))
-                plt.title(dict[format(self.display_loader.dataset[i][1])])
+                img = self.unorm(self.train_loader.dataset[i][0])
+                plt.imshow(transforms.ToPILImage()(img).convert('RGB'))
+                plt.title(dict[format(self.train_loader.dataset[i][1])])
             plt.show(block=False)
             #plt.savefig(path+'/images.png')
         except:
@@ -191,22 +205,40 @@ class training_agent():
         plt.close()
         try:
             plt.figure("Acc Loss")
-            plt.subplot(2,1,1)
-            plt.plot(self.loss_plot)
-            plt.title("Loss")
             plt.subplot(2,1,2)
+            plt.plot(self.loss_plot)
+            plt.xlabel("Epoch")
+            plt.title("Loss")
+            plt.subplot(2,1,1)
             plt.plot(self.acc_plot)
-            plt.title("Acc")
+            plt.title("Acc (%)")
+            
             plt.show(block=False)
             #plt.savefig(path+'/images.png')
         except:
             pass
 
-
     def step(self):
         self.train()
         self.test()
         self.show_loss_plot()
+
+    def predict(self,idx):
+        self.model.eval()
+        img = self.test_loader.dataset[idx][0]
+        #print(img)
+        img_show = self.unorm(img)
+        img = img.unsqueeze(0)
+        x = Variable(img).to(device)
+        output = self.model(x)
+        #print(output[0].shape)
+        if torch.cuda.is_available():
+            output = output.cpu().detach().numpy()
+        else:
+            output = output.detach().numpy()
+
+        print(output[0])
+        pass
 
     def train(self):
         los = []
@@ -268,12 +300,6 @@ class training_agent():
             transforms.ToTensor(),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
 
-        self.data_display = torchvision.datasets.CIFAR10(
-            root = path+'/data',
-            train = True,
-            transform=torchvision.transforms.ToTensor(),
-            download=True,
-        )
         self.train_data = torchvision.datasets.CIFAR10(
             root = path+'/data',
             train = True,
@@ -301,7 +327,23 @@ class training_agent():
         msgBox.setStandardButtons(QMessageBox.Ok)
         reply = msgBox.exec()
 
-    
+#https://discuss.pytorch.org/t/simple-way-to-inverse-transform-normalization/4821/3
+class UnNormalize(object):
+    def __init__(self, mean, std):
+        self.mean = mean
+        self.std = std
+
+    def __call__(self, tensor):
+        """
+        Args:
+            tensor (Tensor): Tensor image of size (C, H, W) to be normalized.
+        Returns:
+            Tensor: Normalized image.
+        """
+        for t, m, s in zip(tensor, self.mean, self.std):
+            t.mul_(s).add_(m)
+            # The normalize code -> t.sub_(m).div_(s)
+        return tensor
 
 
 if __name__ == "__main__":
