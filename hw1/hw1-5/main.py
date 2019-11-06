@@ -131,6 +131,7 @@ class training_agent():
         self.loss_func = nn.CrossEntropyLoss()
 
         self.loss_plot = []
+        self.losstep = []
         self.acc_plot = []
 
     def init_data(self):
@@ -171,9 +172,9 @@ class training_agent():
     def show_loss_plot(self):
         plt.close()
         try:
-            plt.figure("Train loss plot") 
-            plt.plot(self.loss_plot)
-            plt.title("Train loss plot")
+            plt.figure("Step loss plot") 
+            plt.plot(self.losstep)
+            plt.title("Step loss plot")
             plt.show(block=False)
             #plt.savefig(path+'/images.png')
         except:
@@ -199,8 +200,10 @@ class training_agent():
             self.optimizer.step()
             if torch.cuda.is_available():
                 los.append(loss.cpu().detach().numpy()) 
+                self.losstep.append(loss.cpu().detach().numpy()) 
             else:
                 los.append(loss.detach().numpy()) 
+                self.losstep.append(loss.detach().numpy()) 
             if step % 100 == 0:
                 print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
                     self.epoch, 
