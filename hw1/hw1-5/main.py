@@ -72,7 +72,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
        
     def on_bt_show_train_images_click(self):
         self.cifar.init_data()
-        print("init")
+        #print("init")
         t = threading.Thread(target = self.cifar.show_image())
         t.start()
 
@@ -80,7 +80,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.cifar.show_hyperparameter()
 
     def on_bt_train_1_epoch_click(self):
-        pass
+        if not self.cifar.if_have_data:
+            self.cifar.init_data()
+        self.cifar.step()
 
     def on_bt_show_training_result_click(self):
         pass
@@ -99,14 +101,23 @@ class training_agent():
         self.learning_rate = 0.001
         self.optimizer = 'SGD'
 
+        ##############################
+        self.if_have_data = False
+
         self.train_data = None
         self.train_loader = None
 
+        self.test_data = None
+        self.test_loader = None
+        ##############################
         self.model = models.resnet18()
         self.model.to(device)
 
         self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
         self.loss_func = nn.CrossEntropyLoss()
+
+        self.loss_plot = []
+        self.acc_plot = []
 
     def init_data(self):
         #td = threading.Thread(target = self.notice())
@@ -114,9 +125,14 @@ class training_agent():
         t.start()
         t.join()
         #print(self.train_data)
+
         self.train_loader = torch.utils.data.DataLoader(dataset=self.train_data,
-                                                        batch_size=32,
+                                                        batch_size=self.batch,
                                                         shuffle=True)
+        self.test_loader = torch.utils.data.DataLoader(dataset=self.test_data,
+                                                        batch_size=self.batch,
+                                                        shuffle=False)
+        self.if_have_data = True
 
     def show_image(self):
         #print(len(self.train_data.train_data))
@@ -134,6 +150,31 @@ class training_agent():
         except:
             pass
         
+    def step(self):
+        los = []
+        self.model.train()
+        self.epoch += 1
+        for step, (x, y) in enumerate(self.train_loader):
+            data = Variable(x).to(device)
+            target = Variable(y).to(device)
+            output = self.model(data)
+            loss = self.loss_func(output, target)
+            self.optimizer.zero_grad()
+            loss.backward()
+            self.optimizer.step()
+            los.append(loss.detach().numpy()) 
+            if step % 50 == 0:
+                print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                    self.epoch, 
+                    step * len(data), 
+                    len(self.train_loader.dataset),
+                    100. * step / len(self.train_loader), 
+                    loss.data.item()))
+        print("Finish")
+        
+        self.loss_plot.append(sum(los)/len(los))
+        print(self.loss_plot)
+
 
     def download_data(self):
         self.train_data = torchvision.datasets.CIFAR10(
@@ -142,6 +183,10 @@ class training_agent():
             transform=torchvision.transforms.ToTensor(),
             download=True,
         )
+        self.test_data = torchvision.datasets.CIFAR10(
+            root='./data/',
+            train=False,
+            transform=torchvision.transforms.ToTensor())
 
     def show_hyperparameter(self):
         print("================================")
