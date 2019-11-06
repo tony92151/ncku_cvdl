@@ -8,12 +8,12 @@ import numpy as np
 
 
 import matplotlib
-matplotlib.use("TkAgg")
+matplotlib.use('Qt5Agg')
 
 from sys import platform as sys_pf
-if sys_pf == 'darwin':
-    import matplotlib
-    matplotlib.use("TkAgg")
+# if sys_pf == 'darwin':
+#     import matplotlib
+#     matplotlib.use("TkAgg")
 
 from matplotlib import pyplot as plt
 from numpy.linalg import inv
@@ -30,13 +30,11 @@ import sys
 import time
 import numpy as np
 import math
-import pandas as pd
 from PIL import Image, ImageOps, ImageFilter
 from datetime import datetime
 from torch.autograd import Variable
 from torch.utils.data import Dataset, DataLoader
 import torchvision
-import torchvision.transforms as transforms
 from torchvision import datasets, models, transforms
 import random
 import datetime
@@ -107,6 +105,9 @@ class training_agent():
         self.model = models.resnet18()
         self.model.to(device)
 
+        self.optimizer = torch.optim.SGD(self.model.parameters(), lr=self.learning_rate)
+        self.loss_func = nn.CrossEntropyLoss()
+
     def init_data(self):
         #td = threading.Thread(target = self.notice())
         t = threading.Thread(target = self.download_data())
@@ -122,6 +123,7 @@ class training_agent():
         #print(len(self.train_data.train_labels))
         try:
             plt.figure(12)
+            #axes = fig.add_subplot(111)
             for i in range(10):   
                 print("plot")
                 plt.subplot(2,5,i+1)
