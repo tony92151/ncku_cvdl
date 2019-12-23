@@ -41,9 +41,17 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.bt_ketpoints.clicked.connect(self.on_bt_ketpoints)
         # 3.2 bt_matched_keypoints
         self.bt_matched_keypoints.clicked.connect(self.on_bt_matched_keypoints)
+        # OK & cancel
+        self.bt_cancel.clicked.connect(self.on_bt_cancel)
 
     def on_bt_find_diaparity(self):
-        pass
+        input_l = cv2.imread("imL.png", cv2.IMREAD_GRAYSCALE)
+        input_r = cv2.imread("imR.png", cv2.IMREAD_GRAYSCALE)
+        stereo = cv2.StereoBM_create(16*6, 9)
+        disparity = stereo.compute(input_l, input_r)
+        #disparity = disparity*1
+        #print(input_l)
+        self.diaplay_imgs(disparity)
 
     def on_bt_ncc(self):
         pass
@@ -53,7 +61,14 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
     def on_bt_matched_keypoints(self):
         pass
-        
+
+    def on_bt_cancel(self):
+        sys.exit(app.exec_())
+
+    def diaplay_imgs(self, imgs):
+        cv2.imshow('img',imgs)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
