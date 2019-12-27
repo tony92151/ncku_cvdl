@@ -86,12 +86,80 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         plt.show()
         #min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
         #print(min_val)
-        pass
+        #pass
 
     def on_bt_ketpoints(self):
-        pass
+        img1 = cv2.imread("Aerial1.jpg")
+        img2 = cv2.imread("Aerial2.jpg")
+
+        img1_gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+        img2_gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+        
+        # Initiate SIFT detector
+        print("Init orb")
+        orb = cv2.ORB_create(nfeatures = 6,
+                            scaleFactor = 1.2,
+                            nlevels = 8,
+                            edgeThreshold = 20,
+                            firstLevel = 0,
+                            WTA_K = 2,
+                            patchSize = 31,
+                            fastThreshold = 10)
+
+        kp1, des1 = orb.detectAndCompute(img1_gray,None)
+        kp2, des2 = orb.detectAndCompute(img2_gray,None)
+
+        img1_display = cv2.drawKeypoints(img1_gray.copy(),
+                                        kp1,color=(0,255,0),
+                                        flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
+                                        outImage = img1_gray)
+        img2_display = cv2.drawKeypoints(img2_gray.copy(),
+                                        kp2,color=(0,255,0),
+                                        flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
+                                        outImage = img2_gray)
+        cv2.imwrite("FeatureAerial1.jpg",img1_display)
+        cv2.imwrite("FeatureAerial2.jpg",img2_display)
+        #print("Draw key point")
+        #######################################
+        plt.subplot(121)
+        plt.imshow(img1_display,cmap = 'gray')
+        #plt.title('Template matching feature')
+        #######################################
+        plt.subplot(122)
+        plt.imshow(img2_display,cmap = 'gray')
+        #plt.title('Detected Point')
+        #######################################
+        plt.show()
+        #pass
 
     def on_bt_matched_keypoints(self):
+        img1 = cv2.imread("Aerial1.jpg")
+        img2 = cv2.imread("Aerial2.jpg")
+
+        img1_gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
+        img2_gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
+        
+        # Initiate SIFT detector
+        #print("Init orb")
+        orb = cv2.ORB_create(nfeatures = 6,
+                            scaleFactor = 1.2,
+                            nlevels = 8,
+                            edgeThreshold = 20,
+                            firstLevel = 0,
+                            WTA_K = 2,
+                            patchSize = 31,
+                            fastThreshold = 10)
+        kp1, des1 = orb.detectAndCompute(img1_gray,None)
+        kp2, des2 = orb.detectAndCompute(img2_gray,None)
+        
+        
+        bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
+        matches = bf.match(des1, des2)
+        matches = sorted(matches, key=lambda x: x.distance)
+        img3 = cv2.drawMatches(img1_gray, kp2, img2_gray, kp1, matches[:80], img2, flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT)
+
+        plt.imshow(img3)
+        plt.show()
         pass
 
     def on_bt_cancel(self):
