@@ -51,9 +51,41 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         disparity = stereo.compute(input_l, input_r)
         #disparity = disparity*1
         #print(input_l)
-        self.diaplay_imgs(disparity)
+        #self.diaplay_imgs(disparity)
+        print(disparity.max(),disparity.min())
+        #plt.savefig("ma.png",cmap="gray")
+        plt.imshow(disparity,cmap="gray")
+        plt.show()
 
     def on_bt_ncc(self):
+        img = cv2.imread("ncc_img.jpg")
+        img_g = cv2.cvtColor(img.copy(),cv2.COLOR_BGR2GRAY)
+        template = cv2.imread("ncc_template.jpg", cv2.IMREAD_GRAYSCALE)
+        #print(template.shape[::-1])
+        h,w = template.shape
+
+        res = cv2.matchTemplate(img_g,template,cv2.TM_CCOEFF_NORMED)
+
+        #print(res)
+        threshold = 0.95
+        loc = np.where( res >= threshold)
+        for pt in zip(*loc[::-1]):
+            cv2.rectangle(img, pt, (pt[0] + w, pt[1] + h), (0,0,0), 2)
+            #print("Draw")
+
+        img = cv2.cvtColor(img.copy(),cv2.COLOR_BGR2RGB)
+        #######################################
+        plt.subplot(121)
+        plt.imshow(res,cmap = 'gray')
+        plt.title('Template matching feature')
+        #######################################
+        plt.subplot(122)
+        plt.imshow(img)
+        plt.title('Detected Point')
+        #######################################
+        plt.show()
+        #min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+        #print(min_val)
         pass
 
     def on_bt_ketpoints(self):
