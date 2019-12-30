@@ -19,6 +19,8 @@ from numpy.linalg import inv
 import time
 import threading
 
+print(cv2.__version__)
+
 
 path = os.getcwd()
 qtCreatorFile = path + os.sep + "mainwindow.ui"
@@ -96,26 +98,24 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         img2_gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
         
         # Initiate SIFT detector
-        print("Init orb")
-        orb = cv2.ORB_create(nfeatures = 6,
-                            scaleFactor = 1.2,
-                            nlevels = 8,
-                            edgeThreshold = 20,
-                            firstLevel = 0,
-                            WTA_K = 2,
-                            patchSize = 31,
-                            fastThreshold = 10)
+        print("Init SIFT")
+        sift = cv2.xfeatures2d.SIFT_create()
 
-        kp1, des1 = orb.detectAndCompute(img1_gray,None)
-        kp2, des2 = orb.detectAndCompute(img2_gray,None)
+        kp1 = sift.detect(img1,None)
+        kp1.sort(key=lambda x: -x.size)
+
+        kp2 = sift.detect(img2,None)
+        kp2 = sorted(kp2,key=lambda x: -x.size)
+
+        
 
         img1_display = cv2.drawKeypoints(img1_gray.copy(),
-                                        kp1,color=(0,255,0),
-                                        flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
+                                        kp1[:6],color=(0,255,0),
+                                        flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT,
                                         outImage = img1_gray)
         img2_display = cv2.drawKeypoints(img2_gray.copy(),
-                                        kp2,color=(0,255,0),
-                                        flags=cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS,
+                                        kp2[:6],color=(0,255,0),
+                                        flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT,
                                         outImage = img2_gray)
         cv2.imwrite("FeatureAerial1.jpg",img1_display)
         cv2.imwrite("FeatureAerial2.jpg",img2_display)
@@ -123,11 +123,11 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         #######################################
         plt.subplot(121)
         plt.imshow(img1_display,cmap = 'gray')
-        #plt.title('Template matching feature')
+        plt.title('FeatureAerial1.jpg')
         #######################################
         plt.subplot(122)
         plt.imshow(img2_display,cmap = 'gray')
-        #plt.title('Detected Point')
+        plt.title('FeatureAerial2.jpg')
         #######################################
         plt.show()
         #pass
@@ -135,31 +135,53 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_bt_matched_keypoints(self):
         img1 = cv2.imread("Aerial1.jpg")
         img2 = cv2.imread("Aerial2.jpg")
+        matchImg = np.zeros_like(img1)
 
         img1_gray = cv2.cvtColor(img1, cv2.COLOR_BGR2GRAY)
         img2_gray = cv2.cvtColor(img2, cv2.COLOR_BGR2GRAY)
         
         # Initiate SIFT detector
-        #print("Init orb")
-        orb = cv2.ORB_create(nfeatures = 6,
-                            scaleFactor = 1.2,
-                            nlevels = 8,
-                            edgeThreshold = 20,
-                            firstLevel = 0,
-                            WTA_K = 2,
-                            patchSize = 31,
-                            fastThreshold = 10)
-        kp1, des1 = orb.detectAndCompute(img1_gray,None)
-        kp2, des2 = orb.detectAndCompute(img2_gray,None)
-        
-        
-        bf = cv2.BFMatcher(cv2.NORM_HAMMING, crossCheck=True)
-        matches = bf.match(des1, des2)
-        matches = sorted(matches, key=lambda x: x.distance)
-        img3 = cv2.drawMatches(img1_gray, kp2, img2_gray, kp1, matches[:80], img2, flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT)
+        print("Init SIFT")
+        sift = cv2.xfeatures2d.SIFT_create()
 
-        plt.imshow(img3)
+        kp1, des1 = sift.detectAndCompute(img1_gray, None)
+        kp2, des2 = sift.detectAndCompute(img2_gray, None)
+
+        kpdes1 = sorted(list(zip(kp1, des1)),key = lambda x: -x[0].size)
+        kpdes2 = sorted(list(zip(kp2, des2)),key = lambda x: -x[0].size)
+        kp1 = [i[0] for i in kpdes1][:6]
+        des1 = [i[1] for i in kpdes1][:6]
+        kp2 = [i[0] for i in kpdes2][:6]
+        des2 = [i[1] for i in kpdes2][:6]
+        #print(kp1)
+
+        img1_display = cv2.drawKeypoints(img1_gray.copy(),
+                                        kp1,color=(0,255,0),
+                                        flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT,
+                                        outImage = img1_gray)
+        img2_display = cv2.drawKeypoints(img2_gray.copy(),
+                                        kp2,color=(0,255,0),
+                                        flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT,
+                                        outImage = img2_gray)
+
+        bf = cv2.BFMatcher_create(normType=cv2.NORM_L2, crossCheck=True)
+        matches = bf.match(np.asarray(des1,np.float32), np.asarray(des2,np.float32)) 
+        # bf = cv2.BFMatcher()
+        # matches = bf.knnMatch(des1, des2, k=2)
+        #matches = sorted(matches, key=lambda x: x.distance)
+        matchImg = cv2.drawMatches(img1_gray, kp1, img2_gray, kp2, matches, matchImg, flags=cv2.DRAW_MATCHES_FLAGS_DEFAULT)
+
+        plt.imshow(matchImg)
         plt.show()
+        # plt.subplot(121)
+        # plt.imshow(img1_display,cmap = 'gray')
+        # plt.title('FeatureAerial1.jpg')
+        # #######################################
+        # plt.subplot(122)
+        # plt.imshow(img2_display,cmap = 'gray')
+        # plt.title('FeatureAerial2.jpg')
+        # #######################################
+        # plt.show()
         pass
 
     def on_bt_cancel(self):
