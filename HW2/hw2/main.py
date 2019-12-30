@@ -32,7 +32,7 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         super(MainWindow, self).__init__(parent)
         self.setupUi(self)
         self.onBindingUI()
-
+        #plt.figure(num='astronaut',figsize=(8,8))
 
     def onBindingUI(self):
         # 1.1 bt_find_diaparity
@@ -49,13 +49,8 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def on_bt_find_diaparity(self):
         input_l = cv2.imread("imL.png", cv2.IMREAD_GRAYSCALE)
         input_r = cv2.imread("imR.png", cv2.IMREAD_GRAYSCALE)
-        stereo = cv2.StereoBM_create(16*6, 9)
+        stereo = cv2.StereoBM_create(numDisparities=64, blockSize=9)
         disparity = stereo.compute(input_l, input_r)
-        #disparity = disparity*1
-        #print(input_l)
-        #self.diaplay_imgs(disparity)
-        print(disparity.max(),disparity.min())
-        #plt.savefig("ma.png",cmap="gray")
         plt.imshow(disparity,cmap="gray")
         plt.show()
 
